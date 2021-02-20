@@ -11,6 +11,16 @@ if [[ "$1" == 'stop' ]]; then
 	exit 0
 fi
 
+if ! [[ -r $file ]]; then
+        echo "$file is unreadable!"
+        exit 2
+fi
+
+if ! [[ -w $file ]]; then
+        echo "$file is unwritable"
+        exit 3
+fi
+
 start_bot() {
 	$directory/shellbot.sh
 }
