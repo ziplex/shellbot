@@ -11,6 +11,8 @@ if [[ "$1" == 'stop' ]]; then
 	exit 0
 fi
 
+touch $file
+
 if ! [[ -r $file ]]; then
         echo "$file is unreadable!"
         exit 2
