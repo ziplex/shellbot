@@ -11,64 +11,57 @@ send() {
 		--data-urlencode "text=$3"
 }
 
-message_id() {
-	echo "$updates" | jq ".result[$i].message.message_id"
+check_update() {
+	updates="$(curl -s "$tele_url/getUpdates" --data-urlencode "offset=$(($last_id + 1))" --data-urlencode "timeout=5")"
+	updates_count=$(echo "$updates" | jq -r ".result | length")
+	last_id=$(echo "$updates" | jq -r ".result[$(( "$updates_count" - 1 ))].update_id")
 }
 
-user_id() {
-	from_user_id="$(echo "$updates" | jq ".result[$i].message.from.id")"
-}
-
-reply_id() {
+parse_json() {
+	chat_id="$(echo "$updates" | jq ".result[$i].message.chat.id")"
+	message_text="$(echo "$updates" | jq ".result[$i].message.text")"
+	message_id="$(echo "$updates" | jq ".result[$i].message.message_id")"
 	reply_id="$(echo "$updates" | jq ".result[$i].message.reply_to_message.message_id")"
+	from_id="$(echo "$updates" | jq ".result[$i].message.from.id")"
 }
 
-reply_text() {
-	reply_text="$(echo "$updates" | jq ".result[$i].message.reply_to_message.text")"
-	if [[ $reply_text == 'null' ]]; then
-		reply_text="$(echo "$updates" | jq ".result[$i].message.reply_to_message.caption")"
+write_log() {
+	date +%F-%T >> $directory/shell.log
+	echo "$updates" | jq ".result[$i]" >> $directory/shell.log
+}
+
+bash_command() {
+	matches=0
+	for master_id in ${master_ids[*]}; do
+		if [[ "$from_id" == "$master_id" ]]; then
+			matches=$(($matches + 1))
+		fi
+	done
+	if [[ $matches != 0 ]]; then
+		send "$chat_id" "$message_id" "$(bash -c "$message_text 2>&1")"
+	else
+		echo "User $from_id not in master_ids list. Check your bot privacy settings."
 	fi
-	reply_text="$(echo "$reply_text" | sed --sandbox 's#\\"#"#g;s#\\\\#\\#g;s/^"//;s/"$//')"
 }
-
 
 while true; do
 	ping -c1 $(echo "$tele_url" | cut -d '/' -f 3) 2>&1 > /dev/null && {
-		updates=$(curl -s "$tele_url/getUpdates" \
-			--data-urlencode "offset=$(( $last_id + 1 ))" \
-			--data-urlencode "timeout=60")
-		updates_count=$(echo "$updates" | jq -r ".result | length")
-		last_id=$(echo "$updates" | jq -r ".result[$(( "$updates_count" - 1 ))].update_id")
+		check_update
 		for ((i=0; i<"$updates_count"; i++)); do
-			(
-			date +%F-%T >> $directory/shell.log
-			echo "$updates" | jq ".result[$i]" >> $directory/shell.log
-			chat_id="$(echo "$updates" | jq ".result[$i].message.chat.id")"
-			message_text="$(echo "$updates" | jq ".result[$i].message.text")"
+			parse_json
+			write_log
 			if [[ $message_text == 'null' ]]; then
-				message_text="$(echo "$updates" | jq ".result[$i].message.caption")"
+				echo "nothing to do"
 			fi
 			message_text="$(echo "$message_text" | sed --sandbox 's#\\"#"#g;s#\\\\#\\#g;s/^"//;s/"$//')"
 			case $message_text in
 				'ping'*)
-					send "$chat_id" "$(message_id)" "pong"
+					send "$chat_id" "$message_id" "pong"
 				;;
 				*)
-					user_id
-					matches=0
-					for master_id in ${master_ids[*]}; do
-						if [[ "$from_user_id" == "$master_id" ]]; then
-							send "$chat_id" "$(message_id)" "$(bash -c "$message_text &")"
-							matches=$(($matches + 1))
-						fi
-					done
-					if [[ $matches == 0 ]]; then
-						echo "User $from_user_id not in master_ids list. Check your bot privacy settings."
-					fi
+					bash_command
 				;;
 			esac
-			) &
-			wait
 		done
 	}
 done
