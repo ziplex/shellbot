@@ -2,7 +2,6 @@
 
 directory="$(dirname $(realpath $0))"
 source $directory/config.sh
-api_url='https://api.telegram.org'
 file='/tmp/shellbotd'
 
 if [[ "$1" == 'stop' ]]; then
