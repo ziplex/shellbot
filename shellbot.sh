@@ -2,7 +2,6 @@
 
 directory="$(dirname $(realpath $0))"
 source $directory/config.sh
-tele_url="$api_url/bot$token"
 last_id=0
 
 send() {

@@ -4,7 +4,6 @@ directory="$(dirname $(realpath $0))"
 source $directory/config.sh
 api_url='https://api.telegram.org'
 file='/tmp/shellbotd'
-tele_url="$api_url/bot$token"
 
 if [[ "$1" == 'stop' ]]; then
 	pkill shellbot
