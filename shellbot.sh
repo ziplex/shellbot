@@ -4,14 +4,14 @@ directory="$(dirname $(realpath $0))"
 source $directory/config.sh
 last_id=0
 
-send() {
+reply_to_message() {
 	curl -s "$tele_url/sendMessage" \
 		--data-urlencode "chat_id=$1" \
 		--data-urlencode "reply_to_message_id=$2" \
 		--data-urlencode "text=$3"
 }
 
-forward() {
+send() {
 	curl -s "$tele_url/sendMessage" \
 		--data-urlencode "chat_id=$1" \
 		--data-urlencode "text=$2"
@@ -42,7 +42,8 @@ write_log() {
 alert() {
 	if [[ "$enable_alert" == "true" ]]; then
 		for master_id in ${master_ids[*]}; do
-			forward "$master_id" "$message"
+			send "$master_id" "Message from unauthorized users:\ 
+			$message"
 		done
 	fi
 }
@@ -64,10 +65,10 @@ bash_command() {
 	if [[ $matches == 1 ]]; then
 		response_text="$(bash -c "$message_text 2>&1")"
 		while [ ${#response_text} -gt $response_length ]; do
-			send "$chat_id" "$message_id" "${response_text:0:response_length}"
+			reply_to_message "$chat_id" "$message_id" "${response_text:0:response_length}"
 			response_text=${response_text:response_length}
 		done
-		send "$chat_id" "$message_id" "$response_text" 
+		reply_to_message "$chat_id" "$message_id" "$response_text" 
 	else
 		admin_log $from_id
 		alert
@@ -86,7 +87,7 @@ while true; do
 			message_text="$(echo "$message_text" | sed --sandbox 's#\\"#"#g;s#\\\\#\\#g;s/^"//;s/"$//')"
 			case $message_text in
 				'ping'*)
-					send "$chat_id" "$message_id" "pong"
+					reply_to_message "$chat_id" "$message_id" "pong"
 				;;
 				*)
 					bash_command
