@@ -34,7 +34,7 @@ write_log() {
 }
 
 alert() {
-	if [ $enable_alert == 'true' ]; then
+	if [[ "$enable_alert" == "true" ]]; then
 		for master_id in ${master_ids[*]}; do
 			send "$master_id" "$message_id" "$message"
 		done
@@ -43,8 +43,8 @@ alert() {
 
 admin_log() {
 	date +%F-%T >> $directory/admin.log
-	echo "User $1 not in master_ids list. Check your bot privacy settings.
-	Message:
+	echo "User $1 not in master_ids list. Check your bot privacy settings. \
+	Message: \
 	$message" >> $directory/admin.log
 }
 
