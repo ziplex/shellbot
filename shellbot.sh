@@ -33,9 +33,19 @@ write_log() {
 	echo "$updates" | jq ".result[$i]" >> $directory/shell.log
 }
 
+alert() {
+	if [ $enable_alert == 'true' ]; then
+		for master_id in ${master_ids[*]}; do
+			send "$master_id" "$message_id" "$message"
+		done
+	fi
+}
+
 admin_log() {
 	date +%F-%T >> $directory/admin.log
-	echo "User $1 not in master_ids list. Check your bot privacy settings.\nMessage:\n$message" >> $directory/admin.log
+	echo "User $1 not in master_ids list. Check your bot privacy settings.
+	Message:
+	$message" >> $directory/admin.log
 }
 
 bash_command() {
@@ -54,6 +64,7 @@ bash_command() {
 		send "$chat_id" "$message_id" "$response_text" 
 	else
 		admin_log $from_id
+		alert
 	fi
 }
 
