@@ -33,6 +33,11 @@ write_log() {
 	echo "$updates" | jq ".result[$i]" >> $directory/shell.log
 }
 
+admin_log() {
+	date +%F-%T >> $directory/admin.log
+	echo "User $1 not in master_ids list. Check your bot privacy settings.\nMessage:\n$message" >> $directory/admin.log
+}
+
 bash_command() {
 	matches=0
 	for master_id in ${master_ids[*]}; do
@@ -48,7 +53,7 @@ bash_command() {
 		done
 		send "$chat_id" "$message_id" "$response_text" 
 	else
-		echo "User $from_id not in master_ids list. Check your bot privacy settings."
+		admin_log $from_id
 	fi
 }
 
@@ -59,7 +64,7 @@ while true; do
 			parse_json
 			write_log
 			if [[ $message_text == 'null' ]]; then
-				echo "nothing to do"
+				continue
 			fi
 			message_text="$(echo "$message_text" | sed --sandbox 's#\\"#"#g;s#\\\\#\\#g;s/^"//;s/"$//')"
 			case $message_text in
