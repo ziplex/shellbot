@@ -11,6 +11,12 @@ send() {
 		--data-urlencode "text=$3"
 }
 
+forward() {
+	curl -s "$tele_url/sendMessage" \
+		--data-urlencode "chat_id=$1" \
+		--data-urlencode "text=$2"
+}
+
 check_update() {
 	updates="$(curl -s "$tele_url/getUpdates" \
 		--data-urlencode "offset=$(($last_id + 1))" \
@@ -36,7 +42,7 @@ write_log() {
 alert() {
 	if [[ "$enable_alert" == "true" ]]; then
 		for master_id in ${master_ids[*]}; do
-			send "$master_id" "$message_id" "$message"
+			forward "$master_id" "$message"
 		done
 	fi
 }
