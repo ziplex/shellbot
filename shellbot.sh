@@ -12,17 +12,20 @@ send() {
 }
 
 check_update() {
-	updates="$(curl -s "$tele_url/getUpdates" --data-urlencode "offset=$(($last_id + 1))" --data-urlencode "timeout=5")"
+	updates="$(curl -s "$tele_url/getUpdates" \
+		--data-urlencode "offset=$(($last_id + 1))" \
+		--data-urlencode "timeout=5")"
 	updates_count=$(echo "$updates" | jq -r ".result | length")
 	last_id=$(echo "$updates" | jq -r ".result[$(( "$updates_count" - 1 ))].update_id")
 }
 
 parse_json() {
-	chat_id="$(echo "$updates" | jq ".result[$i].message.chat.id")"
-	message_text="$(echo "$updates" | jq ".result[$i].message.text")"
-	message_id="$(echo "$updates" | jq ".result[$i].message.message_id")"
-	reply_id="$(echo "$updates" | jq ".result[$i].message.reply_to_message.message_id")"
-	from_id="$(echo "$updates" | jq ".result[$i].message.from.id")"
+	message="$(echo "$updates" | jq ".result[$i].message")"
+	chat_id="$(echo "$message" | jq ".chat.id")"
+	message_text="$(echo "$message" | jq ".text")"
+	message_id="$(echo "$message" | jq ".message_id")"
+	reply_id="$(echo "$message" | jq ".reply_to_message.message_id")"
+	from_id="$(echo "$message" | jq ".from.id")"
 }
 
 write_log() {
@@ -37,8 +40,13 @@ bash_command() {
 			matches=$(($matches + 1))
 		fi
 	done
-	if [[ $matches != 0 ]]; then
-		send "$chat_id" "$message_id" "$(bash -c "$message_text 2>&1")"
+	if [[ $matches == 1 ]]; then
+		response_text="$(bash -c "$message_text 2>&1")"
+		while [ ${#response_text} -gt $response_length ]; do
+			send "$chat_id" "$message_id" "${response_text:0:response_length}"
+			response_text=${response_text:response_length}
+		done
+		send "$chat_id" "$message_id" "$response_text" 
 	else
 		echo "User $from_id not in master_ids list. Check your bot privacy settings."
 	fi
